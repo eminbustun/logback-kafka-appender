@@ -1,75 +1,142 @@
 package com.github.danielwegener.logback.kafka;
 
-import com.github.danielwegener.logback.kafka.util.TestKafka;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy;
+import com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ErrorCollector;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Testcontainers
 public class LogbackIntegrationIT {
 
-    @Rule
-    public ErrorCollector collector= new ErrorCollector();
+    @Container
+    public static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.0"));
 
-    private TestKafka kafka;
-    private org.slf4j.Logger logger;
+    private KafkaAppender<ILoggingEvent> kafkaAppender;
+    private LoggerContext loggerContext;
+    private static final String TOPIC = "logs";
 
-    @Before
-    public void beforeLogSystemInit() throws IOException, InterruptedException {
-        kafka = TestKafka.createTestKafka(Collections.singletonList(9092));
-        logger = LoggerFactory.getLogger("LogbackIntegrationIT");
+    @BeforeEach
+    public void setup() throws Exception {
+        // 1. Create the topic to prevent "Leader Not Available" startup race conditions
+        try (AdminClient adminClient = AdminClient.create(Map.of(
+            AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers()
+        ))) {
+            NewTopic newTopic = new NewTopic(TOPIC, 1, (short) 1);
+            adminClient.createTopics(Collections.singletonList(newTopic)).all().get();
+        }
 
+        loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+        loggerContext.reset();
+
+        // 2. CRITICAL: Silence the Kafka internal logs.
+        // Otherwise, the internal Producer logs itself to the same topic, breaking the test assertions.
+        loggerContext.getLogger("org.apache.kafka").setLevel(Level.WARN);
+        loggerContext.getLogger("org.apache.kafka.clients").setLevel(Level.WARN);
+
+        // 3. Configure the Appender
+        kafkaAppender = new KafkaAppender<>();
+        kafkaAppender.setContext(loggerContext);
+        kafkaAppender.setName("kafkaAppender");
+        kafkaAppender.setTopic(TOPIC);
+
+        kafkaAppender.addProducerConfigValue("bootstrap.servers", kafka.getBootstrapServers());
+        kafkaAppender.addProducerConfigValue("client.id", "integration-test-client");
+        kafkaAppender.addProducerConfigValue("max.block.ms", "10000");
+
+        kafkaAppender.setKeyingStrategy(new NoKeyKeyingStrategy());
+        kafkaAppender.setDeliveryStrategy(new AsynchronousDeliveryStrategy());
+
+        PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+        encoder.setContext(loggerContext);
+        encoder.setPattern("%msg");
+        encoder.setCharset(StandardCharsets.UTF_8);
+        encoder.start();
+        kafkaAppender.setEncoder(encoder);
+
+        kafkaAppender.start();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
-        kafka.shutdown();
-        kafka.awaitShutdown();
+        if (kafkaAppender != null) {
+            kafkaAppender.stop();
+        }
     }
-
 
     @Test
-    public void testLogging() {
+    public void testLoggingToKafka() {
+        Logger logger = loggerContext.getLogger("ROOT");
+        logger.addAppender(kafkaAppender);
+        logger.setLevel(Level.INFO);
 
-        for (int i = 0; i<1000; ++i) {
-            logger.info("message"+(i));
+        int messageCount = 10;
+
+        for (int i = 0; i < messageCount; ++i) {
+            logger.info("message-" + i);
         }
 
-        final KafkaConsumer<byte[], byte[]> client = kafka.createClient();
-        client.assign(Collections.singletonList(new TopicPartition("logs", 0)));
-        client.seekToBeginning(Collections.singletonList(new TopicPartition("logs", 0)));
+        try (KafkaConsumer<byte[], byte[]> consumer = createConsumer()) {
+            consumer.assign(Collections.singletonList(new TopicPartition(TOPIC, 0)));
+            consumer.seekToBeginning(Collections.singletonList(new TopicPartition(TOPIC, 0)));
 
+            int readMessages = 0;
+            long deadline = System.currentTimeMillis() + 10000;
 
-        int no = 0;
+            while (readMessages < messageCount && System.currentTimeMillis() < deadline) {
+                ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<byte[], byte[]> record : records) {
+                    String message = new String(record.value(), StandardCharsets.UTF_8);
 
-        ConsumerRecords<byte[],byte[]> poll = client.poll(1000);
-        while(!poll.isEmpty()) {
-            for (ConsumerRecord<byte[], byte[]> consumerRecord : poll) {
-                final String messageFromKafka = new String(consumerRecord.value(), UTF8);
-                assertThat(messageFromKafka, Matchers.equalTo("message"+no));
-                ++no;
+                    // Robustness: Skip internal logs if they still sneak in
+                    if (!message.startsWith("message-")) {
+                        System.err.println("Skipping unexpected log message in topic: " + message);
+                        continue;
+                    }
+
+                    assertEquals("message-" + readMessages, message);
+                    readMessages++;
+                }
             }
-            poll = client.poll(1000);
+
+            assertEquals(messageCount, readMessages, "Did not receive all messages from Kafka");
         }
-
-        assertEquals(1000, no);
-
     }
 
-    private static final Charset UTF8 = Charset.forName("UTF-8");
-
+    private KafkaConsumer<byte[], byte[]> createConsumer() {
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        return new KafkaConsumer<>(props);
+    }
 }

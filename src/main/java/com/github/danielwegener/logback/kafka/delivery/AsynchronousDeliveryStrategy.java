@@ -1,6 +1,5 @@
 package com.github.danielwegener.logback.kafka.delivery;
 
-import org.apache.kafka.clients.producer.BufferExhaustedException;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -25,10 +24,10 @@ public class AsynchronousDeliveryStrategy implements DeliveryStrategy {
                 }
             });
             return true;
-        } catch (BufferExhaustedException | TimeoutException e) {
+        } catch (TimeoutException e) {
+            // BufferExhaustedException extends TimeoutException in Kafka 3.x, so this catches both.
             failedDeliveryCallback.onFailedDelivery(event, e);
             return false;
         }
     }
-
 }
