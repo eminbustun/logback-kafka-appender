@@ -1,228 +1,129 @@
-# logback-kafka-appender
 
-This project originally belongs to Daniel Wegener.
+# Logback Kafka Appender (Modernized Fork)
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.eminbustun/logback-kafka-appender/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.eminbustun/logback-kafka-appender)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.eminbustun/logback-kafka-appender.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.eminbustun%22%20AND%20a:%22logback-kafka-appender%22)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-[![Build master with Maven](https://github.com/eminbustun/logback-kafka-appender/actions/workflows/maven.yml/badge.svg)](https://github.com/eminbustun/logback-kafka-appender/actions/workflows/maven.yml)
+This library provides a **Logback** appender that writes application logs directly to **Apache Kafka**.
 
-[![codecov](https://codecov.io/gh/eminbustun/logback-kafka-appender/branch/master/graph/badge.svg?token=qHPWPEAnGU)](https://codecov.io/gh/eminbustun/logback-kafka-appender)
+## Credits & Acknowledgments
 
-This appender lets your application publish its application logs directly to Apache Kafka.
+**This project is a modernized fork of the original [logback-kafka-appender](https://github.com/danielwegener/logback-kafka-appender) created by [Daniel Wegener](https://github.com/danielwegener).**
 
-## Logback incompatibility Warning 
+We deeply respect and appreciate Daniel's significant contribution to the open-source community. He built the robust foundation that this project stands upon. This fork aims to continue his work by updating the library for modern Java ecosystems (Java 17+, Kafka 3.x), maintaining dependencies, and adding new features requested by the community.
 
-__Due to a breaking change in the Logback Encoder API you need to use at least logback version 1.2.__
+## Key Features & Changes in This Fork
 
-## Full configuration example
+* **Java 17+ Support:** The codebase has been modernized to support Java 17 and newer LTS versions.
+* **Upgraded Dependencies:**
+    * `kafka-clients` updated to **3.x** (compatible with modern brokers).
+    * `logback-classic` updated to **1.5.x**.
+    * `slf4j-api` updated to **2.0.x**.
+* **New Partitioning Strategy:** Added `MDCKeyingStrategy` to partition logs based on specific business keys (e.g., User ID, Transaction ID).
+* **Fixed Key Encoding:** Fixed issues where keys were being hashed incorrectly; now supports raw UTF-8 string keys for better observability.
+* **Cleaned Up:** Removed deprecated `BlockingDeliveryStrategy` to ensure non-blocking performance.
 
-Add `logback-kafka-appender` and `logback-classic` as library dependencies to your project.
+## Installation
 
+This library is available on **Maven Central**.
+
+### Maven
 ```xml
-[maven pom.xml]
 <dependency>
     <groupId>io.github.eminbustun</groupId>
     <artifactId>logback-kafka-appender</artifactId>
-    <version>0.2.0</version>
-    <scope>runtime</scope>
+    <version>1.0.0</version>
 </dependency>
-<dependency>
-    <groupId>ch.qos.logback</groupId>
-    <artifactId>logback-classic</artifactId>
-    <version>1.2.3</version>
-    <scope>runtime</scope>
-</dependency>
+````
+
+### Gradle
+
+```groovy
+implementation 'io.github.eminbustun:logback-kafka-appender:1.0.0'
 ```
 
-```scala
-// [build.sbt]
-libraryDependencies += "io.github.eminbustun" % "logback-kafka-appender" % "0.2.0"
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
-```
+## Configuration
 
-This is an example `logback.xml` that uses a common `PatternLayout` to encode a log message as a string.
+Here is a complete example `logback.xml` configuration.
 
 ```xml
-[src/main/resources/logback.xml]
 <configuration>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="KAFKA" class="com.github.eminbustun.logback.kafka.KafkaAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
+
+        <topic>app-logs</topic>
+
+        <keyingStrategy class="com.github.eminbustun.logback.kafka.keying.MDCKeyingStrategy">
+            <mdcKey>userId</mdcKey> </keyingStrategy>
+
+        <deliveryStrategy class="com.github.eminbustun.logback.kafka.delivery.AsynchronousDeliveryStrategy" />
+
+        <producerConfig>bootstrap.servers=localhost:9092</producerConfig>
+        <producerConfig>client.id=${HOSTNAME}</producerConfig>
+        <producerConfig>compression.type=gzip</producerConfig>
+        <producerConfig>max.block.ms=2000</producerConfig> </appender>
+
+    <appender name="ASYNC_KAFKA" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="KAFKA" />
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
     </appender>
 
-    <!-- This is the kafkaAppender -->
-    <appender name="kafkaAppender" class="io.github.eminbustun.logback.kafka.KafkaAppender">
-            <encoder>
-                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            </encoder>
-            <topic>logs</topic>
-            <keyingStrategy class="io.github.eminbustun.logback.kafka.keying.NoKeyKeyingStrategy" />
-            <deliveryStrategy class="io.github.eminbustun.logback.kafka.delivery.AsynchronousDeliveryStrategy" />
-            
-            <!-- Optional parameter to use a fixed partition -->
-            <!-- <partition>0</partition> -->
-            
-            <!-- Optional parameter to include log timestamps into the kafka message -->
-            <!-- <appendTimestamp>true</appendTimestamp> -->
-
-            <!-- each <producerConfig> translates to regular kafka-client config (format: key=value) -->
-            <!-- producer configs are documented here: https://kafka.apache.org/documentation.html#newproducerconfigs -->
-            <!-- bootstrap.servers is the only mandatory producerConfig -->
-            <producerConfig>bootstrap.servers=localhost:9092</producerConfig>
-
-            <!-- this is the fallback appender if kafka is not available. -->
-            <appender-ref ref="STDOUT" />
-        </appender>
-
     <root level="info">
-        <appender-ref ref="kafkaAppender" />
+        <appender-ref ref="ASYNC_KAFKA" />
     </root>
-</configuration>
 
+</configuration>
 ```
 
-You may also look at the [complete configuration examples](src/example/resources/logback.xml)
-
-### Compatibility
-
-logback-kafka-appender depends on `org.apache.kafka:kafka-clients:1.0.0:jar`. It can append logs to a kafka broker with version 0.9.0.0 or higher.
-
-The dependency to kafka-clients is not shadowed and may be upgraded to a higher, api compatible, version through dependency overrides.
-
-### Delivery strategies
-
-Direct logging over the network is not a trivial thing because it might be much less reliable than the local file system and has a much bigger impact on the application performance if the transport has hiccups.
 
 
-| Strategy   | Description  |
-|---|---|
-| `AsynchronousDeliveryStrategy` | Dispatches each log message to the `Kafka Producer`. If the delivery fails for some reasons, the message is dispatched to the fallback appenders. However, this DeliveryStrategy _does_ block if the producers send buffer is full (this can happen if the connection to the broker gets lost). To avoid even this blocking, enable the producerConfig `block.on.buffer.full=false`. All log messages that cannot be delivered fast enough will then immediately go to the fallback appenders. |
+### Using Round-Robin Partitioning (NoKey)
+If you want to distribute logs evenly across all available partitions (load balancing) without any specific ordering requirement, use the `NoKeyKeyingStrategy`. This effectively disables key generation.
 
-#### Note on Broker outages
+**XML:**
+```xml
+<keyingStrategy class="com.github.eminbustun.logback.kafka.keying.NoKeyKeyingStrategy" />
+````
 
-The `AsynchronousDeliveryStrategy` does not prevent you from being blocked by the Kafka metadata exchange. That means: If all brokers are not reachable when the logging context starts, or all brokers become unreachable for a longer time period (> `metadata.max.age.ms`), your appender will eventually block. This behavior is undesirable in general and can be mitigated with kafka-clients 0.9 (see #16). 
+## Partitioning Strategies (KeyingStrategy)
 
-In any case, if you want to make sure the appender will never block your application, you can wrap the KafkaAppender with logback's own [AsyncAppender](https://logback.qos.ch/manual/appenders.html#AsyncAppender) or, for more control, the [LoggingEventAsyncDisruptorAppender](https://github.com/logstash/logstash-logback-encoder#async-appenders) from Logstash Logback Encoder.
+Partitioning is crucial for log ordering. Kafka guarantees order only within a single partition.
 
-An example configuration could look like this:
+| Strategy | Description |
+| :--- | :--- |
+| **`NoKeyKeyingStrategy`** | (Default) No key is generated. Logs are distributed round-robin. Good for load balancing, bad for ordering. |
+| **`HostNameKeyingStrategy`** | Uses the hostname as the key. All logs from a specific server go to the same partition. |
+| **`MDCKeyingStrategy`** | **(New)** Uses a value from the Logback MDC (Mapped Diagnostic Context). Useful for keeping logs of a specific user or transaction together. |
+| **`ThreadNameKeyingStrategy`** | Uses the thread name as the key. |
+| **`LoggerNameKeyingStrategy`** | Uses the logger name (e.g., class name) as the key. |
+
+### Using MDC Partitioning
+
+To group logs by a business ID (e.g., `transactionId`), use `MDCKeyingStrategy` in XML and set the value in your Java code:
+
+**Java:**
+
+```java
+import org.slf4j.MDC;
+// ...
+MDC.put("transactionId", "TX-12345");
+logger.info("Processing payment..."); // This log will be keyed with "TX-12345"
+MDC.remove("transactionId");
+```
+
+**XML:**
 
 ```xml
-<configuration>
-
-    <!-- This is the kafkaAppender -->
-    <appender name="kafkaAppender" class="io.github.eminbustun.logback.kafka.KafkaAppender">
-    <!-- Kafka Appender configuration -->
-    </appender>
-
-    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
-        <!-- if neverBlock is set to true, the async appender discards messages when its internal queue is full -->
-        <neverBlock>true</neverBlock>  
-        <appender-ref ref="kafkaAppender" />
-    </appender>
-
-    <root level="info">
-        <appender-ref ref="ASYNC" />
-    </root>
-</configuration>
-
+<keyingStrategy class="com.github.eminbustun.logback.kafka.keying.MDCKeyingStrategy">
+    <mdcKey>transactionId</mdcKey>
+</keyingStrategy>
 ```
-
-#### Custom delivery strategies
-
-You may also roll your own delivery strategy. Just extend `io.github.eminbustun.logback.kafka.delivery.DeliveryStrategy`.
-
-#### Fallback-Appender
-
-If, for whatever reason, the kafka-producer decides that it cannot publish a log message, the message could still be logged to a fallback appender (a `ConsoleAppender` on STDOUT or STDERR would be a reasonable choice for that).
-
-Just add your fallback appender(s) as logback `appender-ref` to the `KafkaAppender` section in your `logback.xml`. Every message that cannot be delivered to kafka will be written to _all_ defined `appender-ref`'s.
-
-Example: `<appender-ref ref="STDOUT">` while `STDOUT` is an defined appender.
-
-Note that the `AsynchronousDeliveryStrategy` will reuse the kafka producers io thread to write the message to the fallback appenders. Thus all fallback appenders should be reasonable fast so they do not slow down or break the kafka producer.
-
-
-### Producer tuning
-
-This appender uses the [kafka producer](https://kafka.apache.org/documentation.html#producerconfigs) introduced in kafka-0.8.2.
-It uses the producer default configuration.
-
-You may override any known kafka producer config with an `<producerConfig>Name=Value</producerConfig>` block (note that the `boostrap.servers` config is mandatory).
-This allows a lot of fine tuning potential (eg. with `batch.size`, `compression.type` and `linger.ms`).
-
-## Serialization
-
-This module supports any `ch.qos.logback.core.encoder.Encoder`. This allows you to use any encoder  that is capable of encoding an `ILoggingEvent` or `IAccessEvent` like the well-known 
-[logback `PatternLayoutEncoder`](https://logback.qos.ch/manual/encoders.html#PatternLayoutEncoder) or for example the 
-[logstash-logback-encoder's `LogstashEncoxer`](https://github.com/logstash/logstash-logback-encoder#usage).
-
-### Custom Serialization
-
-If you want to write something different than string on your kafka logging topic, you may roll your encoding mechanism. A use case would be to
-to smaller message sizes and/or better serialization/deserialization performance on the producing or consuming side. Useful formats could be BSON, Avro or others.
-
-To roll your own implementation please refer to the [logback documentation](https://logback.qos.ch/xref/ch/qos/logback/core/encoder/Encoder.html).
-Note that logback-kafka-appender will _never_ call the `headerBytes()` or `footerBytes()` method.
-
-Your encoder should be type-parameterized for any subtype of the type of event you want to support (typically `ILoggingEvent`) like in
-
-```java
-public class MyEncoder extends ch.qos.logback.core.encoder.Encoder<ILoggingEvent> {/*..*/}
-```
-
-## Keying strategies / Partitioning
-
-Kafka's scalability and ordering guarantees heavily rely on the concepts of partitions ([more details here](https://kafka.apache.org/082/documentation.html#introduction)).
-For application logging this means that we need to decide how we want to distribute our log messages over multiple kafka
-topic partitions. One implication of this decision is how messages are ordered when they are consumed from a
-arbitrary multi-partition consumer since kafka only provides a guaranteed read order only on each single partition.
-Another implication is how evenly our log messages are distributed across all available partitions and therefore balanced
-between multiple brokers.
-
-The order of log messages may or may not be important, depending on the intended consumer-audience (e.g. a logstash indexer will reorder all message by its timestamp anyway).
-
-You can provide a fixed partition for the kafka appender using the `partition` property or let the producer use the message key to partition a message. Thus `logback-kafka-appender` supports the following keying strategies strategies:
-
-| Strategy   | Description  |
-|---|---|
-| `NoKeyKeyingStrategy` (default)   | Does not generate a message key. Results in round robin distribution across partition if no fixed partition is provided. |
-| `HostNameKeyingStrategy` | This strategy uses the HOSTNAME as message key. This is useful because it ensures that all log messages issued by this host will remain in the correct order for any consumer. But this strategy can lead to uneven log distribution for a small number of hosts (compared to the number of partitions). |
-| `ContextNameKeyingStrategy` |  This strategy uses logback's CONTEXT_NAME as message key. This is ensures that all log messages logged by the same logging context will remain in the correct order for any consumer. But this strategy can lead to uneven log distribution for a small number of hosts (compared to the number of partitions). This strategy only works for `ILoggingEvents`. |
-| `ThreadNameKeyingStrategy` |  This strategy uses the calling threads name as message key. This ensures that all messages logged by the same thread will remain in the correct order for any consumer. But this strategy can lead to uneven log distribution for a small number of thread(-names) (compared to the number of partitions). This strategy only works for `ILoggingEvents`. |
-| `LoggerNameKeyingStrategy` | * This strategy uses the logger name as message key. This ensures that all messages logged by the same logger will remain in the correct order for any consumer. But this strategy can lead to uneven log distribution for a small number of distinct loggers (compared to the number of partitions). This strategy only works for `ILoggingEvents`. |
-
-
-
-### Custom keying strategies
-
-If none of the above keying strategies satisfies your requirements, you can easily implement your own by implementing a custom `KeyingStrategy`:
-
-```java
-package foo;
-import io.github.eminbustun.logback.kafka.keying.KeyingStrategy;
-
-/* This is a valid example but does not really make much sense */
-public class LevelKeyingStrategy implements KeyingStrategy<ILoggingEvent> {
-    @Override
-    public byte[] createKey(ILoggingEvent e) {
-        return ByteBuffer.allocate(4).putInt(e.getLevel()).array();
-    }
-}
-```
-
-As most custom logback component, your custom partitioning strategy may also implement the
-`ch.qos.logback.core.spi.ContextAware` and `ch.qos.logback.core.spi.LifeCycle` interfaces.
-
-A custom keying strategy may especially become handy when you want to use kafka's log compactation facility.
-
-## FAQ
-
-- __Q: I want to log to different/multiple topics!<br>__
-  A: No problem, create an appender for each topic.
 
 ## License
 
-This project is licensed under the [Apache License Version 2.0](LICENSE).
-
+This project is licensed under the [Apache License Version 2.0](https://www.google.com/search?q=LICENSE).
