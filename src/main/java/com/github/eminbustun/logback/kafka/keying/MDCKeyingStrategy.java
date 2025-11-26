@@ -4,18 +4,21 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import java.nio.charset.StandardCharsets;
 
 /**
- * MDC (Mapped Diagnostic Context) içindeki belirli bir anahtarın değerini
- * Kafka mesaj anahtarı (Key) olarak kullanır.
- * * Bu strateji, aynı MDC değerine sahip (örneğin aynı 'siparisId' veya 'userId')
- * logların Kafka'da aynı partition'a gitmesini garanti eder.
+ * Uses the value of a specific key from the MDC (Mapped Diagnostic Context) as the Kafka message key.
+ * This ensures that all log messages with the same MDC key (e.g. same 'userId' or 'requestId')
+ * will be sent to the same Kafka partition and remain in the correct order.
+ *
+ * Example: {@code <mdcKey>userId</mdcKey>}
  */
 public class MDCKeyingStrategy implements KeyingStrategy<ILoggingEvent> {
 
     private String mdcKey;
 
     /**
-     * logback.xml üzerinden set edilecek parametre.
-     * Örnek: <mdcKey>userId</mdcKey>
+     * The parameter to be set via logback.xml.
+     * Example: {@code <mdcKey>userId</mdcKey>}
+     *
+     * @param mdcKey The key to look up in the MDC.
      */
     public void setMdcKey(String mdcKey) {
         this.mdcKey = mdcKey;
@@ -25,14 +28,14 @@ public class MDCKeyingStrategy implements KeyingStrategy<ILoggingEvent> {
     public byte[] createKey(ILoggingEvent e) {
         if (mdcKey == null) return null;
 
-        // Log olayının MDC haritasından değeri çek
+        // Get the value from the log event's MDC map
         String value = e.getMDCPropertyMap().get(mdcKey);
 
         if (value == null) {
-            return null; // Değer yoksa null döner (Random partition)
+            return null; // Return null (Random partition) if value is missing
         }
 
-        // Değeri byte dizisine çevirip Kafka'ya veriyoruz
+        // Convert the value to bytes and use it as the Kafka key
         return value.getBytes(StandardCharsets.UTF_8);
     }
 }
