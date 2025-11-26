@@ -97,12 +97,10 @@ The dependency to kafka-clients is not shadowed and may be upgraded to a higher,
 
 Direct logging over the network is not a trivial thing because it might be much less reliable than the local file system and has a much bigger impact on the application performance if the transport has hiccups.
 
-You need make a essential decision: Is it more important to deliver all logs to the remote Kafka or is it more important to keep the application running smoothly? Either of this decisions allows you to tune this appender for throughput.
 
 | Strategy   | Description  |
 |---|---|
 | `AsynchronousDeliveryStrategy` | Dispatches each log message to the `Kafka Producer`. If the delivery fails for some reasons, the message is dispatched to the fallback appenders. However, this DeliveryStrategy _does_ block if the producers send buffer is full (this can happen if the connection to the broker gets lost). To avoid even this blocking, enable the producerConfig `block.on.buffer.full=false`. All log messages that cannot be delivered fast enough will then immediately go to the fallback appenders. |
-| `BlockingDeliveryStrategy` | Blocks each calling thread until the log message is actually delivered. Normally this strategy is discouraged because it has a huge negative impact on throughput. __Warning: This strategy should not be used together with the producerConfig `linger.ms`__  |
 
 #### Note on Broker outages
 

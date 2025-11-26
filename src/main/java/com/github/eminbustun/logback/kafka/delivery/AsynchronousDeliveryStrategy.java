@@ -1,4 +1,4 @@
-package com.github.danielwegener.logback.kafka.delivery;
+package com.github.eminbustun.logback.kafka.delivery;
 
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;

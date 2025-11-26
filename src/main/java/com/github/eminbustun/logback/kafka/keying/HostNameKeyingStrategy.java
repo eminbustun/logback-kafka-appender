@@ -1,4 +1,4 @@
-package com.github.danielwegener.logback.kafka.keying;
+package com.github.eminbustun.logback.kafka.keying;
 
 import ch.qos.logback.core.Context;
 import ch.qos.logback.core.CoreConstants;

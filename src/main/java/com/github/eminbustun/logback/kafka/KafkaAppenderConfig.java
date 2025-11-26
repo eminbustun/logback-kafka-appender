@@ -1,12 +1,12 @@
-package com.github.danielwegener.logback.kafka;
+package com.github.eminbustun.logback.kafka;
 
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.encoder.Encoder;
 import ch.qos.logback.core.spi.AppenderAttachable;
-import com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy;
-import com.github.danielwegener.logback.kafka.delivery.DeliveryStrategy;
-import com.github.danielwegener.logback.kafka.keying.KeyingStrategy;
-import com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy;
+import com.github.eminbustun.logback.kafka.delivery.AsynchronousDeliveryStrategy;
+import com.github.eminbustun.logback.kafka.delivery.DeliveryStrategy;
+import com.github.eminbustun.logback.kafka.keying.KeyingStrategy;
+import com.github.eminbustun.logback.kafka.keying.NoKeyKeyingStrategy;
 
 import java.util.HashMap;
 import java.util.Map;

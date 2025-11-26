@@ -1,4 +1,4 @@
-package com.github.danielwegener.logback.kafka;
+package com.github.eminbustun.logback.kafka;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
