@@ -3,47 +3,38 @@ package com.github.eminbustun.logback.kafka.keying;
 import ch.qos.logback.core.Context;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.spi.ContextAwareBase;
-
 import ch.qos.logback.core.spi.LifeCycle;
-import java.nio.ByteBuffer;
 
-/**
- * This strategy uses the HOSTNAME as kafka message key.
- * This is useful because it ensures that all log messages issued by this host will remain in the correct order for any consumer.
- * But this strategy can lead to uneven log distribution for a small number of hosts (compared to the number of partitions).
- * @since 0.0.1
- */
+import java.nio.charset.StandardCharsets;
+
 public class HostNameKeyingStrategy extends ContextAwareBase implements KeyingStrategy<Object>, LifeCycle {
 
-    private byte[] hostnameHash = null;
-    private boolean errorWasShown = false;
+    private byte[] hostnameBytes = null;
 
     @Override
     public void setContext(Context context) {
         super.setContext(context);
         final String hostname = context.getProperty(CoreConstants.HOSTNAME_KEY);
         if (hostname == null) {
-            if (!errorWasShown) {
-            addError("Hostname could not be found in context. HostNamePartitioningStrategy will not work.");
-                errorWasShown = true;
-            }
+            addError("Hostname could not be found in context. HostNameKeyingStrategy will not work.");
         } else {
-            hostnameHash = ByteBuffer.allocate(4).putInt(hostname.hashCode()).array();
+            // ESKİ KOD: hostnameHash = ByteBuffer.allocate(4).putInt(hostname.hashCode()).array();
+
+            // YENİ KOD: Hostname'i direkt UTF-8 byte dizisi olarak alıyoruz.
+            hostnameBytes = hostname.getBytes(StandardCharsets.UTF_8);
         }
     }
 
     @Override
     public byte[] createKey(Object e) {
-        return hostnameHash;
+        return hostnameBytes;
     }
 
     @Override
     public void start() { }
 
     @Override
-    public void stop() {
-        errorWasShown = false;
-    }
+    public void stop() { }
 
     @Override
     public boolean isStarted() { return true; }

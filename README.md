@@ -4,11 +4,11 @@
 > This project is no longer maintained (actually for some time now). I just do not find time to maintain this project in my free time. To make this clear I decided to better archive this project on github (and closing the unmoderated gitter channel) instead of just not reacting to new questions, issues and PRs. This may influence your decision to use this project although there still seem to be some happy users and stargazers.
 > I'll be happy to unarchive this project if someone is willing to take over maintenance or link to an active fork. 
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.danielwegener/logback-kafka-appender/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.danielwegener/logback-kafka-appender)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.eminbustun/logback-kafka-appender/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.eminbustun/logback-kafka-appender)
 
-[![Build master with Maven](https://github.com/danielwegener/logback-kafka-appender/actions/workflows/maven.yml/badge.svg)](https://github.com/danielwegener/logback-kafka-appender/actions/workflows/maven.yml)
+[![Build master with Maven](https://github.com/eminbustun/logback-kafka-appender/actions/workflows/maven.yml/badge.svg)](https://github.com/eminbustun/logback-kafka-appender/actions/workflows/maven.yml)
 
-[![codecov](https://codecov.io/gh/danielwegener/logback-kafka-appender/branch/master/graph/badge.svg?token=qHPWPEAnGU)](https://codecov.io/gh/danielwegener/logback-kafka-appender)
+[![codecov](https://codecov.io/gh/eminbustun/logback-kafka-appender/branch/master/graph/badge.svg?token=qHPWPEAnGU)](https://codecov.io/gh/eminbustun/logback-kafka-appender)
 
 This appender lets your application publish its application logs directly to Apache Kafka.
 
@@ -23,7 +23,7 @@ Add `logback-kafka-appender` and `logback-classic` as library dependencies to yo
 ```xml
 [maven pom.xml]
 <dependency>
-    <groupId>com.github.danielwegener</groupId>
+    <groupId>com.github.eminbustun</groupId>
     <artifactId>logback-kafka-appender</artifactId>
     <version>0.2.0</version>
     <scope>runtime</scope>
@@ -38,7 +38,7 @@ Add `logback-kafka-appender` and `logback-classic` as library dependencies to yo
 
 ```scala
 // [build.sbt]
-libraryDependencies += "com.github.danielwegener" % "logback-kafka-appender" % "0.2.0"
+libraryDependencies += "com.github.eminbustun" % "logback-kafka-appender" % "0.2.0"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 ```
 
@@ -55,13 +55,13 @@ This is an example `logback.xml` that uses a common `PatternLayout` to encode a 
     </appender>
 
     <!-- This is the kafkaAppender -->
-    <appender name="kafkaAppender" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+    <appender name="kafkaAppender" class="com.github.eminbustun.logback.kafka.KafkaAppender">
             <encoder>
                 <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
             </encoder>
             <topic>logs</topic>
-            <keyingStrategy class="com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy" />
-            <deliveryStrategy class="com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy" />
+            <keyingStrategy class="com.github.eminbustun.logback.kafka.keying.NoKeyKeyingStrategy" />
+            <deliveryStrategy class="com.github.eminbustun.logback.kafka.delivery.AsynchronousDeliveryStrategy" />
             
             <!-- Optional parameter to use a fixed partition -->
             <!-- <partition>0</partition> -->
@@ -114,7 +114,7 @@ An example configuration could look like this:
 <configuration>
 
     <!-- This is the kafkaAppender -->
-    <appender name="kafkaAppender" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+    <appender name="kafkaAppender" class="com.github.eminbustun.logback.kafka.KafkaAppender">
     <!-- Kafka Appender configuration -->
     </appender>
 
@@ -133,7 +133,7 @@ An example configuration could look like this:
 
 #### Custom delivery strategies
 
-You may also roll your own delivery strategy. Just extend `com.github.danielwegener.logback.kafka.delivery.DeliveryStrategy`.
+You may also roll your own delivery strategy. Just extend `com.github.eminbustun.logback.kafka.delivery.DeliveryStrategy`.
 
 #### Fallback-Appender
 
@@ -203,7 +203,7 @@ If none of the above keying strategies satisfies your requirements, you can easi
 
 ```java
 package foo;
-import com.github.danielwegener.logback.kafka.keying.KeyingStrategy;
+import com.github.eminbustun.logback.kafka.keying.KeyingStrategy;
 
 /* This is a valid example but does not really make much sense */
 public class LevelKeyingStrategy implements KeyingStrategy<ILoggingEvent> {

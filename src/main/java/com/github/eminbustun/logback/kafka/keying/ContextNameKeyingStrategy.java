@@ -4,6 +4,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Context;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.spi.ContextAwareBase;
+import java.nio.charset.StandardCharsets;
 
 import java.nio.ByteBuffer;
 
@@ -15,7 +16,7 @@ import java.nio.ByteBuffer;
  */
 public class ContextNameKeyingStrategy extends ContextAwareBase implements KeyingStrategy<ILoggingEvent> {
 
-    private byte[] contextNameHash = null;
+    private byte[] contextNameBytes = null;
 
     @Override
     public void setContext(Context context) {
@@ -24,12 +25,12 @@ public class ContextNameKeyingStrategy extends ContextAwareBase implements Keyin
         if (hostname == null) {
             addError("Hostname could not be found in context. HostNamePartitioningStrategy will not work.");
         } else {
-            contextNameHash = ByteBuffer.allocate(4).putInt(hostname.hashCode()).array();
+            contextNameBytes = hostname.getBytes(StandardCharsets.UTF_8);
         }
     }
 
     @Override
     public byte[] createKey(ILoggingEvent e) {
-        return contextNameHash;
+        return contextNameBytes;
     }
 }

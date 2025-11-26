@@ -1,6 +1,7 @@
 package com.github.eminbustun.logback.kafka.keying;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import java.nio.charset.StandardCharsets;
 
 import java.nio.ByteBuffer;
 
@@ -20,7 +21,7 @@ public class LoggerNameKeyingStrategy implements KeyingStrategy<ILoggingEvent> {
         } else {
             loggerName = e.getLoggerName();
         }
-        return ByteBuffer.allocate(4).putInt(loggerName.hashCode()).array();
+        return loggerName.getBytes(StandardCharsets.UTF_8);
     }
 
 }

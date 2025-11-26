@@ -1,8 +1,7 @@
 package com.github.eminbustun.logback.kafka.keying;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
-
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 /**
  * This strategy uses the calling threads name as partitioning key. This ensures that all messages logged by the
@@ -14,6 +13,6 @@ public class ThreadNameKeyingStrategy implements KeyingStrategy<ILoggingEvent> {
 
     @Override
     public byte[] createKey(ILoggingEvent e) {
-        return ByteBuffer.allocate(4).putInt(e.getThreadName().hashCode()).array();
+        return e.getThreadName().getBytes(StandardCharsets.UTF_8);
     }
 }

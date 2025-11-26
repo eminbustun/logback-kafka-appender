@@ -15,16 +15,16 @@
 
     <!-- This example configuration is probably most unreliable under
     failure conditions but wont block your application at all -->
-    <appender name="very-relaxed-and-fast-kafka-appender" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+    <appender name="very-relaxed-and-fast-kafka-appender" class="com.github.eminbustun.logback.kafka.KafkaAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
         <topic>boring-logs</topic>
         <!-- we don't care how the log messages will be partitioned  -->
-        <keyingStrategy class="com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy" />
+        <keyingStrategy class="com.github.eminbustun.logback.kafka.keying.NoKeyKeyingStrategy" />
 
         <!-- use async delivery. the application threads are not blocked by logging -->
-        <deliveryStrategy class="com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy" />
+        <deliveryStrategy class="com.github.eminbustun.logback.kafka.delivery.AsynchronousDeliveryStrategy" />
 
         <!-- each <producerConfig> translates to regular kafka-client config (format: key=value) -->
         <!-- producer configs are documented here: https://kafka.apache.org/documentation.html#newproducerconfigs -->

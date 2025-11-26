@@ -1,12 +1,12 @@
-package com.github.danielwegener.logback.kafka;
+package com.github.eminbustun.logback.kafka;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy;
-import com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy;
+import com.github.eminbustun.logback.kafka.delivery.AsynchronousDeliveryStrategy;
+import com.github.eminbustun.logback.kafka.keying.NoKeyKeyingStrategy;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
