@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.eminbustun</groupId>
     <artifactId>logback-kafka-appender</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <parent>
         <groupId>org.sonatype.oss</groupId>
         <artifactId>oss-parent</artifactId>
@@ -35,8 +35,8 @@
         <maven.compiler.target>${targetJdk}</maven.compiler.target>
 
         <slf4j.version>2.0.12</slf4j.version>
-        <logback.version>1.5.3</logback.version>
-        <kafka.version>3.7.0</kafka.version>
+        <logback.version>1.5.19</logback.version>
+        <kafka.version>3.9.1</kafka.version>
         <junit.version>5.10.2</junit.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <mockito.version>5.11.0</mockito.version>
