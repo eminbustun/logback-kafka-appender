@@ -32,14 +32,14 @@ This library is available on **Maven Central**.
 <dependency>
     <groupId>io.github.eminbustun</groupId>
     <artifactId>logback-kafka-appender</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.9</version>
 </dependency>
 ````
 
 ### Gradle
 
 ```groovy
-implementation 'io.github.eminbustun:logback-kafka-appender:1.0.0'
+implementation 'io.github.eminbustun:logback-kafka-appender:1.0.9'
 ```
 
 ## Configuration
